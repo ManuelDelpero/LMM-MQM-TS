@@ -199,9 +199,8 @@ LMMMQMts <- function(genotypes, phenotypes, covariates, map, markers = NULL, win
 }
 
 
-plotEffects <- function(results, map){
+plotEffects <- function(results, map, gap = 10){
   chrs <- unique(map[,"chr"])
-  gap <- 80000000/1000000
   map.sorted <- NULL
   chr.lengths <- c()
   chr.starts <- c(0)
