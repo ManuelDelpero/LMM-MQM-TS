@@ -2,6 +2,7 @@
 # LMM-MQM timeseries analysis
 #
 
+library(nlme)
 
 # genotypes     MxN matrix (M = Markers, N = individuals)
 # phenotypes    NxT matrix (N = individuals, T = Timepoints), timepoints are dXX, where XX is the day
@@ -134,7 +135,7 @@ LMMMQMts <- function(genotypes, phenotypes, covariates, map, markers = NULL, win
       cat("WARN: Marker: ", m, " is included. However, no evidence for inclusion (AIC=", round(diff(AIC(m0,m1)[,2]),2), ")\n", sep = "")
     }
   }
-  
+
   ismissing.md <- which(apply(markerData, 1, function(x){any(is.na(x))}))
   if(length(ismissing.md) > 0){
     cat("WARN: markers selected for MQM leads to removing ", length(ismissing.md), " observations from model (missing data)\n", sep = "")
@@ -198,15 +199,14 @@ LMMMQMts <- function(genotypes, phenotypes, covariates, map, markers = NULL, win
   return(-log10(pvalues))
 }
 
-
-plotEffects <- function(results, map, gap = 10){
+plotEffects <- function(results, map, what = c("All", "Main", "Time"), gap = 10, pch = 20, cex=1, chr.col = c("coral", "blue")){
   chrs <- unique(map[,"chr"])
   map.sorted <- NULL
   chr.lengths <- c()
   chr.starts <- c(0)
   chrmids <- c()
   i <- 1
-  for(chr in chrs){
+  for (chr in chrs) {
     onChr <- which(map[,"chr"] == chr)
     map.sorted <- rbind(map.sorted, map[onChr,])
     chr.lengths <- c(chr.lengths, max(map[onChr, "pos"]))
@@ -219,41 +219,19 @@ plotEffects <- function(results, map, gap = 10){
   names(chr.starts) <- chrs
   names(chr.lengths) <- chrs
 
-  for (x in chrs){
+  for (x in chrs) {
     chrmid <- as.numeric(chr.lengths[x]/2) + as.numeric(chr.starts[x])
     chrmids <- c(chrmids, chrmid)
   }  
-  plot(x = c(-gap, tail(chr.starts,1)), y = c(0,9), t = 'n', xlab="Chromosome", ylab="-log10[P]",xaxt='n', xaxs="i", yaxs="i", las=2, main=paste0("Effect profile"))
-  for(chr in chrs){
+  plot(x = c(-gap, tail(chr.starts,1)), y = c(0, max(results,na.rm=TRUE) * 1.2), t = 'n', xlab="Chromosome", ylab="-log10[P]",xaxt='n', xaxs="i", yaxs="i", las=2, main=paste0("Effect profile"))
+
+  i <- 1
+  for (chr in chrs) {
     onChr <- rownames(map[map[,"chr"] == chr,])
-    allcurrent <- results[onChr, 1]
-    maincurrent <- results[onChr, 2]
-    timecurrent <- results[onChr, 3]
-    if (chr == "X"){
-      points(x=chr.starts[chr] + map[onChr,"pos"], y = allcurrent[onChr, 1], t ='p', pch = 16, cex = 1.5, col= "coral")
-	  #points(x=chr.starts[chr] + map[onChr,"pos"], y = maincurrent[onChr, 1], t ='p', pch = 16, cex = 1.5, col= "coral")
-	  #points(x=chr.starts[chr] + map[onChr,"pos"], y = timecurrent[onChr, 1], t ='p', pch = 16, cex = 1.5, col= "coral")
-    }
-    for (p in 1:length(allcurrent)){
-      pos <- chr.starts[chr] + map[onChr,"pos"]
-        if (chr %in% seq(1,20,2)){
-          points(x=pos[p], y = allcurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-          #points(x=pos[p], y = maincurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-          #points(x=pos[p], y = timecurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-        }else{
-	  points(x=pos[p], y = allcurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-          #points(x=pos[p], y = maincurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-	  #points(x=pos[p], y = timecurrent[p], t ='p', pch = 18, cex = 1.2, col= "coral")
-      }
-    }
+    points(x=chr.starts[chr] + map[onChr,"pos"], y = results[onChr, what[1]], t ='p', pch = pch, cex = cex, col = chr.col[(i %% 2) + 1])
+    i <- i + 1
   }
   axis(1, chrs, at = chrmids)
-  abline(h = -log10(nrow(0.01/results)), col="green",lty=3)
-  abline(h = -log10(nrow(0.05/results)), col="black",lty=3)
+  abline(h = -log10(0.01/nrow(results)), col="green", lty=3)
+  abline(h = -log10(0.05/nrow(results)), col="orange", lty=3)
 }
-
-
-### Example using the BFMI x B6N AIL
-library(nlme)
-
-
